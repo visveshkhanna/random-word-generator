@@ -1,103 +1,138 @@
+"use client";
+
 import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+function shuffleArray<T>(items: T[]): T[] {
+  const array = [...items];
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = array[i];
+    array[i] = array[j];
+    array[j] = tmp;
+  }
+  return array;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [inputValue, setInputValue] = useState("");
+  const [sequence, setSequence] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [started, setStarted] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const wordsRemaining = useMemo(() => {
+    if (!started) return 0;
+    return Math.max(sequence.length - currentIndex - 1, 0);
+  }, [sequence.length, currentIndex, started]);
+
+  const currentWord = useMemo(() => {
+    if (!started || sequence.length === 0) return "";
+    return sequence[currentIndex];
+  }, [sequence, currentIndex, started]);
+
+  const parseWords = (raw: string): string[] => {
+    const parts = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    const unique = Array.from(new Set(parts));
+    return unique;
+  };
+
+  const requestFullscreen = async (): Promise<void> => {
+    const el = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+      msRequestFullscreen?: () => Promise<void> | void;
+    };
+    try {
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+    } catch {
+      // Best-effort; ignore if fullscreen fails
+    }
+  };
+
+  const start = useCallback(async () => {
+    setSequence(shuffleArray(words));
+    setCurrentIndex(0);
+    setStarted(true);
+    await requestFullscreen();
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (!started) return;
+    setCurrentIndex((idx) => {
+      if (idx < sequence.length - 1) return idx + 1;
+      return idx;
+    });
+  }, [sequence.length, started]);
+
+  const goPrev = useCallback(() => {
+    if (!started) return;
+    setCurrentIndex((idx) => (idx > 0 ? idx - 1 : 0));
+  }, [started]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!started) return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goNext, goPrev, started]);
+
+  const words =
+    `WiFi, Bluetooth, USB, Charger, Cloud, Screenshot, Battery Low, Ctrl+Z, VPN, Spam Mail, Cache, Reboot, Pop-up, Autocorrect, Copy Paste, Loading, Update Pending, Forgot Password, Buffering, Notification Overload, Google It, Dark Mode, Airplane Mode, QR Code, Terms & Conditions, Low Network, Offline Mode, Screenshot Leak, ChatGPT, Deepfake, Neural Network, Algorithm, Machine Learning, AI Overlord, Skynet, Siri, Alexa, Predictive Text, Recommender System, Hallucination, Bot, Prompt Engineer, AI Intern, Debugging, Tech Support, Git Push, Commit, Merge Conflict, Stack Overflow, Pull Request, Cloud Storage, Big Data, API, Endpoint, 404 Error, Bug Fix, Cybersecurity, Firewall, Data Leak, Password123, PowerPoint Karaoke, Excel Guru, Meme Generator, Digital Detox, Influencer, AI Ethics, IoT, Smartwatch, Facial Recognition, Captcha, Privacy Policy, Spam Filter, Zoom Call, Screen Share, Mute Button, You’re on Mute, Background Blur, Mic Not Working, Breakout Room, Google Meet, Lag, Reconnect, Raise Hand, Frozen Screen, Slack Notification, Jira Ticket, Agile, Scrum, Product Manager, Feature Request, MVP, Bug Report, Cloud Migration, Tech Debt, Infinite Loop, It Works on My Machine, Keyboard Warrior, Meme Lord, Tech Influencer, Let’s Take It Offline, Data Cleaning, Copywriter Bot, Predictive Emoji, Elon Musk, Twitter, X (formerly Twitter 😏), Instagram Reel, Hashtag, Selfie, Filter, Caption, Trending, Algorithm Gods, Blue Tick, Verified, Influencer Collab, Engagement Rate, Comment Section, Meme Page Admin, Story Viewer, Screenshot Drama, Reddit Thread, Downvote, Upvote, Viral Post, Troll, Cancel Culture, WhatsApp Forward, Fake News, Blue Tick Anxiety, YouTube Shorts, Content Creator, Sponsored Post, LinkedIn Thought Leader, Motivational Quote Post, Office Meme, Instagram Story, Repost, DM, Group Chat, Screenshot Gossip, FOMO, Dating App Bio, Ghosting, Typing..., Seen at 2:47 AM, Screenshot Receipt, “Hey, just checking in!”, Online 2 hours ago, Follow Back, Trendsetter, Cat Video, Keyboard Cat, Relatable Post, “That One Friend Who…” Meme, Influencer in the Wild, “Link in Bio”, Comment for Algorithm, and “Let’s Go Viral!”`.split(
+      ","
+    );
+
+  return (
+    <div ref={containerRef} className="min-h-screen w-full">
+      {!started ? (
+        <div className=" h-dvh justify-center items-center w-full  px-6 py-12 flex flex-col gap-4">
+          <p className="text-4xl font-bold">
+            Let&apos;s play some &quot;Hot Seat&quot;!
+          </p>
+          <Image src={"/giphy.gif"} alt="Giphy" width={800} height={800} />
+          <button
+            onClick={start}
+            className="rounded-md px-4 py-2 cursor-pointer bg-foreground text-background hover:opacity-90 disabled:opacity-40"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Start
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      ) : (
+        <div className="fixed inset-0 flex flex-col items-center justify-center select-none">
+          <div className="absolute inset-0 animate-bgPulse opacity-10" />
+          {/* <div className="absolute top-4 right-4 text-xs sm:text-sm bg-foreground text-background/90 rounded-md px-3 py-1 shadow">
+            <span className="font-semibold mr-2">Remaining:</span>
+            <span>{wordsRemaining}</span>
+          </div> */}
+          <div className="px-6 text-center">
+            <div className="text-5xl sm:text-7xl font-extrabold tracking-tight dance">
+              {currentWord}
+            </div>
+            <div className="mt-6 flex items-center justify-center gap-3 text-xs opacity-70">
+              <span>Left ← previous</span>
+              <span>•</span>
+              <span>Right → next</span>
+            </div>
+            {/* <div className="mt-2 text-xs opacity-60">
+              {wordsRemaining === 0 && currentIndex === sequence.length - 1
+                ? "All words shown"
+                : `${wordsRemaining} remaining`}
+            </div> */}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
